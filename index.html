@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Color Bingo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background: #f0f4f8;
+    margin: 0;
+    padding: 0;
+}
+.screen { display: none; padding: 20px; }
+.active { display: block; }
+h1 { font-size: 2rem; color: #333; }
+p { font-size: 1.1rem; color: #555; }
+#buttons-container {
+    display: grid;
+    grid-template-columns: repeat(4, 80px);
+    gap: 15px;
+    justify-content: center;
+    margin: 20px auto;
+}
+.color-btn {
+    width: 80px;
+    height: 80px;
+    border: 2px solid #333;
+    border-radius: 10px;
+    cursor: pointer;
+}
+.color-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+#good-job {
+    font-size: 3rem;
+    color: green;
+    font-weight: bold;
+    display: none;
+    margin-top: 20px;
+}
+#message {
+    font-size: 1.4rem;
+    font-weight: bold;
+    display: none;
+    margin-top: 15px;
+}
+button.restart-btn {
+    padding: 12px 24px;
+    margin-top: 20px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    background: #2196F3;
+    color: #fff;
+}
+</style>
+</head>
+<body>
+
+<!-- Ventana inicial -->
+<div id="start-screen" class="screen active">
+    <h1>Color Bingo</h1>
+    <p>Watch the video and then click the colors in the correct order: Yellow, Blue, Red, White, Black, Green, Gray, Orange, Purple, Pink, Brown.</p>
+    <button onclick="startGame()">Start</button>
+</div>
+
+<!-- Ventana del juego -->
+<div id="game-screen" class="screen">
+    <h1>Color Bingo</h1>
+    <iframe id="activity-video" src="https://player.vimeo.com/video/1114304316" width="800" height="450" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+
+    <div id="buttons-container"></div>
+    <div id="message"></div>
+    <div id="good-job">GOOD JOB!</div>
+    <button class="restart-btn" onclick="restartGame()">Restart</button>
+</div>
+
+<!-- Confeti -->
+<canvas id="confetti-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;display:none;"></canvas>
+
+<script>
+const colors = [
+    {name: "Yellow", code: "#FFEB3B"},
+    {name: "Blue", code: "#2196F3"},
+    {name: "Red", code: "#F44336"},
+    {name: "White", code: "#FFFFFF"},
+    {name: "Black", code: "#212121"},
+    {name: "Green", code: "#4CAF50"},
+    {name: "Gray", code: "#9E9E9E"},
+    {name: "Orange", code: "#FF9800"},
+    {name: "Purple", code: "#9C27B0"},
+    {name: "Pink", code: "#FFB6C1"},
+    {name: "Brown", code: "#795548"}
+];
+
+const correctOrder = ["Yellow","Blue","Red","White","Black","Green","Gray","Orange","Purple","Pink","Brown"];
+let currentIndex = 0;
+let confettiInterval;
+
+// Mostrar juego
+function startGame() {
+    document.getElementById('start-screen').classList.remove('active');
+    document.getElementById('game-screen').classList.add('active');
+    restartGame();
+}
+
+// Reiniciar
+function restartGame() {
+    stopConfetti();
+    document.getElementById('good-job').style.display = 'none';
+    document.getElementById('message').style.display = 'none';
+    currentIndex = 0;
+    const container = document.getElementById('buttons-container');
+    container.innerHTML = '';
+
+    // Mezclar colores
+    const shuffled = [...colors].sort(() => Math.random() - 0.5);
+
+    shuffled.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = "color-btn";
+        btn.style.background = c.code;
+        btn.onclick = () => checkColor(c.name, btn);
+        container.appendChild(btn);
+    });
+}
+
+// Validar selección
+function checkColor(name, btn) {
+    const message = document.getElementById('message');
+    message.style.display = 'block';
+    
+    if(name === correctOrder[currentIndex]) {
+        btn.disabled = true;
+        currentIndex++;
+        message.textContent = "Correct!";
+        message.style.color = "green";
+
+        if(currentIndex === correctOrder.length) {
+            document.getElementById('good-job').style.display = 'block';
+            startConfetti();
+        }
+    } else {
+        message.textContent = "Error, try again!";
+        message.style.color = "red";
+    }
+}
+
+// Confeti
+function startConfetti() {
+    const canvas = document.getElementById('confetti-canvas');
+    canvas.style.display = 'block';
+    const ctx = canvas.getContext('2d');
+    let pieces = Array.from({ length: 150 }, () => ({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight - window.innerHeight,
+        r: Math.random() * 6 + 4,
+        d: Math.random() * 10 + 10,
+        color: `hsl(${Math.random()*360},100%,50%)`
+    }));
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    function draw() {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        pieces.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI*2,false);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+        });
+        update();
+    }
+    function update() {
+        pieces.forEach(p => {
+            p.y += Math.cos(p.d)+p.r/2;
+            if(p.y>canvas.height){p.y=-10; p.x=Math.random()*canvas.width;}
+        });
+    }
+    confettiInterval = setInterval(draw, 20);
+}
+
+function stopConfetti() {
+    clearInterval(confettiInterval);
+    document.getElementById('confetti-canvas').style.display = 'none';
+}
+</script>
+
+</body>
+</html>
